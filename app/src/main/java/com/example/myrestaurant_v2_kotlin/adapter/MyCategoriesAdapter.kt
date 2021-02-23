@@ -76,4 +76,9 @@ class MyCategoriesAdapter(
                     Common.DEFAULT_COLUMN_COUNT
         }
     }
+
+    @JvmName("getCategoryList1")
+    fun getCategoryList(): List<CategoryModel> {
+        return categoryList
+    }
 }

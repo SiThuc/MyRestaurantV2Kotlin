@@ -200,5 +200,10 @@ class MyFoodListAdapter(
         if (compositeDisposable != null)
             compositeDisposable.clear()
     }
+
+    @JvmName("getFoodList1")
+    fun getFoodList(): List<FoodModel> {
+        return foodList
+    }
 }
 

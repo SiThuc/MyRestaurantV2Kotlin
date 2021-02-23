@@ -7,7 +7,7 @@ import com.example.myrestaurant_v2_kotlin.common.Common
 import com.example.myrestaurant_v2_kotlin.model.FoodModel
 
 class FoodListViewModel : ViewModel() {
-    private var foodListLiveData: MutableLiveData<List<FoodModel>>?= null
+    var foodListLiveData: MutableLiveData<List<FoodModel>>?= null
 
     fun getFoodList():MutableLiveData<List<FoodModel>>{
         if(foodListLiveData == null)

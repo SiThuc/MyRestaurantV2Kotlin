@@ -12,15 +12,10 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
 class CategoryViewModel : ViewModel(), ICategoryCallBackListener {
-    private var categoryListMutable: MutableLiveData<List<CategoryModel>>? = null
+    var categoryListMutable: MutableLiveData<List<CategoryModel>>? = null
     private var messageError: MutableLiveData<String> = MutableLiveData()
 
-    private var categoryCallBackListener: ICategoryCallBackListener
-
-    init {
-        categoryCallBackListener = this
-
-    }
+    private var categoryCallBackListener: ICategoryCallBackListener = this
 
 
     fun getCategoryList(): LiveData<List<CategoryModel>> {
@@ -36,7 +31,7 @@ class CategoryViewModel : ViewModel(), ICategoryCallBackListener {
         return messageError!!
     }
 
-    private fun loadCategoryList() {
+    fun loadCategoryList() {
         var tempList = ArrayList<CategoryModel>()
 
         var categoryRef = FirebaseDatabase.getInstance().getReference(Common.CATEGORY_REF)
@@ -54,7 +49,6 @@ class CategoryViewModel : ViewModel(), ICategoryCallBackListener {
            override fun onCancelled(error: DatabaseError) {
               categoryCallBackListener.onCategoryLoadFailed(error.message)
            }
-
         })
     }
 

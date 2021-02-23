@@ -77,6 +77,8 @@ class FoodDetailFragment : Fragment(), TextWatcher {
         return binding.root
     }
     private fun initView(binding: FragmentFoodDetailBinding) {
+
+        (activity as AppCompatActivity).supportActionBar!!.title = Common.foodSelected!!.name
         //Initiate the cartDataSource
         cartDataSource = LocalCartDataSource(CartDatabase.getInstance(requireContext()).cartDao())
 
