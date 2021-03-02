@@ -26,4 +26,7 @@
     <string name="fragment_view_order">Order List</string>
     <string name="order_history">Order History</string>
     <string name="action_search_category">Search</string>
+
+    <string name="google_maps_key" translatable="false" templateMergeStrategy="preserve">AIzaSyCAUKK1lZ3T7NAFHNcu-Vobl7JQIQGiZIs</string>
+    <string name="update_info">Update Info</string>
 </resources>

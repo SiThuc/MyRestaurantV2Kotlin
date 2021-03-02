@@ -36,7 +36,13 @@ import com.example.myrestaurant_v2_kotlin.model.FCMSendData
 import com.example.myrestaurant_v2_kotlin.model.Order
 import com.example.myrestaurant_v2_kotlin.service.IFCMService
 import com.example.myrestaurant_v2_kotlin.service.RetrofitFCMClient
+import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.*
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -73,6 +79,16 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
     lateinit var ifcmService: IFCMService
 
     lateinit var listener: ILoadTimeFromFirebaseCallback
+
+    private var placeSelected: Place? = null
+    private var places_fragment: AutocompleteSupportFragment? = null
+    private lateinit var placeClient: PlacesClient
+    private val placeFields = Arrays.asList(
+        Place.Field.ID,
+        Place.Field.NAME,
+        Place.Field.ADDRESS,
+        Place.Field.LAT_LNG
+    )
 
 
     override fun onResume() {
@@ -161,13 +177,14 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
 
     private fun buildLocationRequest() {
         locationRequest = LocationRequest()
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-        locationRequest.setInterval(5000)
-        locationRequest.setFastestInterval(3000)
-        locationRequest.setSmallestDisplacement(10f)
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        locationRequest.interval = 5000
+        locationRequest.fastestInterval = 3000
+        locationRequest.smallestDisplacement = 10f
     }
 
     private fun initViews() {
+        initPlacesClient()
         setHasOptionsMenu(true)
 
         ifcmService = RetrofitFCMClient.getInstance().create(IFCMService::class.java)
@@ -189,25 +206,35 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
         fragmentBinding.btnPlaceOrder.setOnClickListener {
             var builder = AlertDialog.Builder(context)
             builder.setTitle("One more step")
-
             val alertDialogBinding = LayoutPlaceOrderBinding.inflate(LayoutInflater.from(context))
 
+            places_fragment = requireActivity().supportFragmentManager.findFragmentById(R.id.places_autocomplete_fragment) as AutocompleteSupportFragment
+            places_fragment!!.setPlaceFields(placeFields)
+            places_fragment!!.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+                override fun onPlaceSelected(p0: Place) {
+                    placeSelected = p0
+                    alertDialogBinding.txtDetailAddress.text = placeSelected!!.address
+                }
+
+                override fun onError(p0: Status) {
+                    Toast.makeText(requireContext(), "" + p0.statusMessage, Toast.LENGTH_SHORT).show()
+                }
+            })
+
             //By default, we select rdi_home => show the user's address
-            alertDialogBinding.edtAddress.setText(Common.currentUser!!.address)
+            alertDialogBinding.txtDetailAddress.text = Common.currentUser!!.address
 
             // If the RadioButton Home is checked
             alertDialogBinding.rdiDeliHome.setOnCheckedChangeListener { buttonView, isChecked ->
                 if (isChecked) {
-                    alertDialogBinding.edtAddress.setText(Common.currentUser!!.address)
+                    alertDialogBinding.txtDetailAddress.text = Common.currentUser!!.address
                 }
             }
 
             //If the RadioButton Other is checked
             alertDialogBinding.rdiDeliOther.setOnCheckedChangeListener { buttonView, isChecked ->
                 if (isChecked) {
-                    alertDialogBinding.edtAddress.setText("")
-                    alertDialogBinding.edtAddress.setHint("Enter your address")
-                    alertDialogBinding.txtDetailAddress.visibility = View.GONE
+                   alertDialogBinding.txtDetailAddress.text = ""
                 }
             }
 
@@ -245,15 +272,11 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                             val disposable = singleAddress.subscribeWith(object :
                                 DisposableSingleObserver<String>() {
                                 override fun onSuccess(t: String) {
-                                    alertDialogBinding.edtAddress.setText(coordinates)
-                                    alertDialogBinding.txtDetailAddress.visibility = View.VISIBLE
-                                    alertDialogBinding.txtDetailAddress.setText(t)
+                                    alertDialogBinding.txtDetailAddress.text = t
                                 }
 
                                 override fun onError(e: Throwable) {
-                                    alertDialogBinding.edtAddress.setText(coordinates)
-                                    alertDialogBinding.txtDetailAddress.visibility = View.VISIBLE
-                                    alertDialogBinding.txtDetailAddress.setText(e.message)
+                                    alertDialogBinding.txtDetailAddress.text = e.message
                                 }
                             })
                         }
@@ -265,13 +288,18 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                 .setPositiveButton("YES", { dialog, _ ->
                     if (alertDialogBinding.rdiPayCod.isChecked)
                         paymentCOD(
-                            alertDialogBinding.edtAddress.text.toString(),
+                            alertDialogBinding.txtDetailAddress.text.toString(),
                             alertDialogBinding.edtComment.text.toString()
                         )
                 })
             val dialog = builder.create()
             dialog.show()
         }
+    }
+
+    private fun initPlacesClient() {
+        Places.initialize(requireContext(), getString(R.string.google_maps_key))
+        placeClient = Places.createClient(requireContext())
     }
 
     private fun getAddressFromLatLng(lat: Double, lng: Double): String {

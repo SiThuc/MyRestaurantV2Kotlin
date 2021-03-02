@@ -31,6 +31,13 @@
             android:title="@string/order_history" />
     </group>
 
+    <group>
+        <item
+            android:id="@+id/nav_update_info"
+            android:icon="@drawable/ic_update_24"
+            android:title="@string/update_info" />
+    </group>
+
     <group android:id="@+id/sign_out">
         <item
             android:id="@+id/nav_sign_out"

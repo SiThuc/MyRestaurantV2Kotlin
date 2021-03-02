@@ -15,9 +15,15 @@ import com.example.myrestaurant_v2_kotlin.databinding.LayoutRegisterBinding
 import com.example.myrestaurant_v2_kotlin.model.UserModel
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.IdpResponse
+import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.*
@@ -32,8 +38,20 @@ import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.single.PermissionListener
 import dmax.dialog.SpotsDialog
 import io.reactivex.disposables.CompositeDisposable
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
+
+    private var placeSelected: Place? = null
+    private var places_fragment: AutocompleteSupportFragment? = null
+    private lateinit var placeClient: PlacesClient
+    private val placeFields = Arrays.asList(
+        Place.Field.ID,
+        Place.Field.NAME,
+        Place.Field.ADDRESS,
+        Place.Field.LAT_LNG
+    )
+
 
     private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var listener: FirebaseAuth.AuthStateListener
@@ -69,6 +87,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun init() {
+        Places.initialize(this, getString(R.string.google_maps_key))
+        placeClient = Places.createClient(this)
+
         firebaseAuth = FirebaseAuth.getInstance()
         userRef = FirebaseDatabase.getInstance().getReference(Common.USER_REF)
         dialog = SpotsDialog.Builder().setContext(this).setCancelable(false).build()
@@ -139,6 +160,20 @@ class MainActivity : AppCompatActivity() {
         builder.setMessage("Please fill information")
 
         val dialog_binding = LayoutRegisterBinding.inflate(layoutInflater)
+        places_fragment =
+            supportFragmentManager.findFragmentById(R.id.places_autocomplete_fragment) as AutocompleteSupportFragment
+        places_fragment!!.setPlaceFields(placeFields)
+        places_fragment!!.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+            override fun onPlaceSelected(p0: Place) {
+                placeSelected = p0
+                dialog_binding.txtAddressDetail.text = placeSelected!!.address
+            }
+
+            override fun onError(p0: Status) {
+                Toast.makeText(this@MainActivity, "" + p0.statusMessage, Toast.LENGTH_SHORT).show()
+            }
+        })
+
 
         //Set phone number for editText
         dialog_binding.edtPhone.setText(user.phoneNumber.toString())
@@ -147,37 +182,47 @@ class MainActivity : AppCompatActivity() {
         builder.setNegativeButton("CANCEL") { dialogInterface, i -> dialogInterface.dismiss() }
 
         builder.setPositiveButton("REGISTER") { dialogInterface, i ->
-            if (TextUtils.isDigitsOnly(dialog_binding.edtName.text.toString())) {
-                Toast.makeText(this, "Please enter your name", Toast.LENGTH_SHORT).show()
-                return@setPositiveButton
-            } else if (TextUtils.isDigitsOnly(dialog_binding.edtAddress.text.toString())) {
-                Toast.makeText(this, "Please enter your address", Toast.LENGTH_SHORT).show()
-                return@setPositiveButton
-            }
+            if (placeSelected != null) {
 
-            val userModel = UserModel()
-            userModel.uid = user.uid
-            userModel.name = dialog_binding.edtName.text.toString()
-            userModel.address = dialog_binding.edtAddress.text.toString()
-            userModel.phone = dialog_binding.edtPhone.text.toString()
-
-            userRef.child(user.uid)
-                .setValue(userModel)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        dialogInterface.dismiss()
-                        Toast.makeText(
-                            this,
-                            "Congratulation! Regisrer success!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        goToHomeActivity(userModel)
-                    }
+                if (TextUtils.isDigitsOnly(dialog_binding.edtName.text.toString())) {
+                    Toast.makeText(this, "Please enter your name", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
                 }
+
+                val userModel = UserModel()
+                userModel.uid = user.uid
+                userModel.name = dialog_binding.edtName.text.toString()
+                userModel.address = dialog_binding.txtAddressDetail.text.toString()
+                userModel.phone = dialog_binding.edtPhone.text.toString()
+                userModel.lat = placeSelected!!.latLng!!.latitude
+                userModel.lng = placeSelected!!.latLng!!.longitude
+
+                userRef.child(user.uid)
+                    .setValue(userModel)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            dialogInterface.dismiss()
+                            Toast.makeText(
+                                this,
+                                "Congratulation! Regisrer success!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            goToHomeActivity(userModel)
+                        }
+                    }
+            } else {
+                Toast.makeText(this@MainActivity, "Please select address", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
 
         val dialog = builder.create()
+        dialog.setOnDismissListener {
+            val fragmentTransaction = supportFragmentManager.beginTransaction()
+            fragmentTransaction.remove(places_fragment!!)
+            fragmentTransaction.commit()
+        }
         dialog.show()
     }
 
@@ -185,20 +230,19 @@ class MainActivity : AppCompatActivity() {
 
         FirebaseMessaging.getInstance().token
             .addOnFailureListener { e ->
-                Toast.makeText(this@MainActivity, ""+e.message, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "" + e.message, Toast.LENGTH_SHORT).show()
                 Common.currentUser = userModel!!
                 startActivity(Intent(this, HomeActivity::class.java))
                 finish()
             }
             .addOnCompleteListener { task ->
-                if(task.isSuccessful){
+                if (task.isSuccessful) {
                     Common.currentUser = userModel!!
                     Common.updateToken(this@MainActivity, task.result)
                     startActivity(Intent(this@MainActivity, HomeActivity::class.java))
                     finish()
                 }
             }
-
 
 
     }
