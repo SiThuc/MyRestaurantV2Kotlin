@@ -32,7 +32,10 @@ import com.example.myrestaurant_v2_kotlin.eventbus.CountCartEvent
 import com.example.myrestaurant_v2_kotlin.eventbus.HideFABCart
 import com.example.myrestaurant_v2_kotlin.eventbus.MenuItemBack
 import com.example.myrestaurant_v2_kotlin.eventbus.UpdateItemInCart
+import com.example.myrestaurant_v2_kotlin.model.FCMSendData
 import com.example.myrestaurant_v2_kotlin.model.Order
+import com.example.myrestaurant_v2_kotlin.service.IFCMService
+import com.example.myrestaurant_v2_kotlin.service.RetrofitFCMClient
 import com.google.android.gms.location.*
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -51,6 +54,7 @@ import org.greenrobot.eventbus.ThreadMode
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.HashMap
 
 class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
     private var cartDataSource: CartDataSource? = null
@@ -65,6 +69,8 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
     private lateinit var locationCallBack: LocationCallback
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var currentLocation: Location
+
+    lateinit var ifcmService: IFCMService
 
     lateinit var listener: ILoadTimeFromFirebaseCallback
 
@@ -81,13 +87,6 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return
         }
         if (fusedLocationProviderClient != null)
@@ -143,13 +142,6 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return
         }
         fusedLocationProviderClient.requestLocationUpdates(
@@ -176,8 +168,10 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
     }
 
     private fun initViews() {
-
         setHasOptionsMenu(true)
+
+        ifcmService = RetrofitFCMClient.getInstance().create(IFCMService::class.java)
+
         listener = this
         cartDataSource = LocalCartDataSource(CartDatabase.getInstance(requireContext()).cartDao())
         fragmentBinding.recyclerCart.setHasFixedSize(true)
@@ -228,13 +222,6 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                             Manifest.permission.ACCESS_COARSE_LOCATION
                         ) != PackageManager.PERMISSION_GRANTED
                     ) {
-                        // TODO: Consider calling
-                        //    ActivityCompat#requestPermissions
-                        // here to request the missing permissions, and then overriding
-                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                        //                                          int[] grantResults)
-                        // to handle the case where the user grants the permission. See the documentation
-                        // for ActivityCompat#requestPermissions for more details.
                     }
                     fusedLocationProviderClient.lastLocation
                         .addOnFailureListener { e ->
@@ -342,14 +329,15 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                                 // Submit to FIrebase
                                 syncLocalTimeWithServerTime(order)
                                 //writeOrderToFirebase(order)
-
-
                             }
 
-                            override fun onError(e: Throwable) {
-                                Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show()
+                            override fun onError(t: Throwable) {
+                                Toast.makeText(
+                                    context,
+                                    "[SUM CART]" + t.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
-
                         })
                 }, { throwable ->
                     Toast.makeText(context, "" + throwable.message, Toast.LENGTH_SHORT).show()
@@ -396,6 +384,31 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                             }
 
                             override fun onSuccess(t: Int) {
+                                val data2Send = HashMap<String, String>()
+                                data2Send[Common.NOTI_TITLE] = "New Order"
+                                data2Send[Common.NOTI_CONTENT] = "You have new order from " + Common.currentUser!!.phone
+                                val sendData = FCMSendData(Common.getNewOrderTopic(), data2Send)
+                                compositeDisposable.add(
+                                    ifcmService.sendNotification(sendData)
+                                        .subscribeOn(Schedulers.io())
+                                        .observeOn(AndroidSchedulers.mainThread())
+                                        .subscribe({ fcmResponse ->
+                                            if (fcmResponse.success != 0)
+                                                Toast.makeText(
+                                                    requireContext(),
+                                                    "Order placed successfully",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                        }, { throwable ->
+                                            Toast.makeText(
+                                                requireContext(),
+                                                "Order was sent but notification failed",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                        )
+                                )
+
                                 Toast.makeText(
                                     context,
                                     "Order placed successfully!",

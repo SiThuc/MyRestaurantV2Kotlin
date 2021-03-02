@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
@@ -14,6 +13,7 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.style.StyleSpan
+import android.util.Log
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -103,6 +103,7 @@ object Common {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun showNotification(context: Context, id: Int, title: String?, content: String?, intent: Intent?) {
+        Log.d("Notification", "Tittle:$title, Content:$content")
         var pendingIntent: PendingIntent?= null
         if(intent != null){
             pendingIntent = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT)
@@ -131,15 +132,17 @@ object Common {
             val notification = builder.build()
 
             notificationManager.notify(id, notification)
+            Log.d("Notification", "Ending notification")
         }
-
-
     }
 
+    fun getNewOrderTopic(): String {
+        return java.lang.StringBuilder("/topics/new_order").toString()
+    }
 
     var currentToken: String? = null
-    val NOTI_CONTENT: String? = "Content"
-    val NOTI_TITLE: String? = "Title"
+    val NOTI_CONTENT: String = "Content"
+    val NOTI_TITLE: String = "Title"
     val TOKEN_REF: String = "Tokens"
     val ORDER_REF: String = "Orders"
     val COMMENT_REF: String = "Comments"
