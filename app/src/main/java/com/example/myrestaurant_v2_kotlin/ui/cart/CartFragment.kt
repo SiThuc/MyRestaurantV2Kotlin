@@ -15,12 +15,10 @@ import androidx.fragment.app.Fragment
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.myrestaurant_v2_kotlin.R
 import com.example.myrestaurant_v2_kotlin.adapter.MyCartAdapter
-import com.example.myrestaurant_v2_kotlin.callback.ILoadOrderCallbackListener
 import com.example.myrestaurant_v2_kotlin.callback.ILoadTimeFromFirebaseCallback
 import com.example.myrestaurant_v2_kotlin.common.Common
 import com.example.myrestaurant_v2_kotlin.database.CartDataSource
@@ -33,7 +31,7 @@ import com.example.myrestaurant_v2_kotlin.eventbus.HideFABCart
 import com.example.myrestaurant_v2_kotlin.eventbus.MenuItemBack
 import com.example.myrestaurant_v2_kotlin.eventbus.UpdateItemInCart
 import com.example.myrestaurant_v2_kotlin.model.FCMSendData
-import com.example.myrestaurant_v2_kotlin.model.Order
+import com.example.myrestaurant_v2_kotlin.model.OrderModel
 import com.example.myrestaurant_v2_kotlin.service.IFCMService
 import com.example.myrestaurant_v2_kotlin.service.RetrofitFCMClient
 import com.google.android.gms.common.api.Status
@@ -335,7 +333,7 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
 
                             override fun onSuccess(t: Double) {
                                 val finalPrice = t
-                                val order = Order()
+                                val order = OrderModel()
                                 order.userId = Common.currentUser!!.uid
                                 order.userName = Common.currentUser!!.name
                                 order.userPhone = Common.currentUser!!.phone
@@ -351,7 +349,7 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
                                 order.totalPayment = t
                                 order.finalPayment = finalPrice
                                 order.discount = 0
-                                order.isCod = true
+                                order.cod = true
                                 order.transactionId = "Cash On Delivery"
 
                                 // Submit to FIrebase
@@ -373,7 +371,7 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
         )
     }
 
-    private fun syncLocalTimeWithServerTime(order: Order) {
+    private fun syncLocalTimeWithServerTime(order: OrderModel) {
         val offsetRef = FirebaseDatabase.getInstance().getReference(".info/serverTimeOffset")
         offsetRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -392,7 +390,7 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
 
     }
 
-    private fun writeOrderToFirebase(order: Order) {
+    private fun writeOrderToFirebase(order: OrderModel) {
         FirebaseDatabase.getInstance()
             .getReference(Common.ORDER_REF)
             .child(Common.createOrderNumber())
@@ -563,7 +561,7 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
         super.onPrepareOptionsMenu(menu)
     }
 
-    override fun onLoadTimeSuccess(order: Order, estimatedTimeMs: Long) {
+    override fun onLoadTimeSuccess(order: OrderModel, estimatedTimeMs: Long) {
         order.createDate = (estimatedTimeMs)
         order.orderStatus = 0
         writeOrderToFirebase(order)

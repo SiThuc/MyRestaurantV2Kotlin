@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -20,13 +19,14 @@ import com.example.myrestaurant_v2_kotlin.database.CartItem
 import com.example.myrestaurant_v2_kotlin.databinding.LayoutDialogOrderDetailBinding
 import com.example.myrestaurant_v2_kotlin.databinding.LayoutOrderItemBinding
 import com.example.myrestaurant_v2_kotlin.eventbus.CancelOrderEvent
-import com.example.myrestaurant_v2_kotlin.model.Order
+import com.example.myrestaurant_v2_kotlin.eventbus.TrackingOrderEvent
+import com.example.myrestaurant_v2_kotlin.model.OrderModel
 import org.greenrobot.eventbus.EventBus
 import java.lang.StringBuilder
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MyOrderAdapter(var context: Context, var orderList: MutableList<Order>):
+class MyOrderAdapter(var context: Context, var orderList: MutableList<OrderModel>):
     RecyclerView.Adapter<MyOrderAdapter.MyViewHolder>() {
 
     private var calendar: Calendar = Calendar.getInstance()
@@ -70,23 +70,29 @@ class MyOrderAdapter(var context: Context, var orderList: MutableList<Order>):
             Glide.with(context).load(order.cartItemList!![0].foodImage).into(layoutBinding.imgFoodImage)
             calendar.timeInMillis = order.createDate
             val date = Date(order.createDate)
-            layoutBinding.txtTime.setText(StringBuilder(Common.getDateOfWeek(calendar.get(Calendar.DAY_OF_WEEK)))
-                .append(" ")
-                .append(simpleDateFormat.format(date)))
-            layoutBinding.txtOrderNumber.setText(StringBuilder("Order No.: ").append(order.orderNumber))
-            layoutBinding.txtComment.setText(StringBuilder("Comment: ").append(order.comment))
-            layoutBinding.txtNumItem.setText(StringBuilder("No. Items: ").append(order.cartItemList!!.size))
-            layoutBinding.txtOrderStatus.setText(StringBuilder("Status: ")
-                .append(Common.convertStatusToText(order.orderStatus)))
+            layoutBinding.txtTime.text = StringBuilder(Common.getDateOfWeek(calendar.get(Calendar.DAY_OF_WEEK)))
+                    .append(" ")
+                    .append(simpleDateFormat.format(date))
+            layoutBinding.txtOrderNumber.text = StringBuilder("Order No.: ").append(order.orderNumber)
+            layoutBinding.txtComment.text = StringBuilder("Comment: ").append(order.comment)
+            layoutBinding.txtNumItem.text = StringBuilder("No. Items: ").append(order.cartItemList!!.size)
+            layoutBinding.txtOrderStatus.text = StringBuilder("Status: ")
+                    .append(Common.convertStatusToText(order.orderStatus))
 
-            //Event
+            /******************Event***********************/
+            //Open detail Order
+            layoutBinding.imgFoodImage.setOnClickListener {
+                showDialog(order.cartItemList!!)
+            }
+
+            //Cancel Order
             layoutBinding.btnCancel.setOnClickListener {
                 EventBus.getDefault().postSticky(CancelOrderEvent(position))
             }
 
-            layoutBinding.imgFoodImage.setOnClickListener {
-                Log.d("DEBUG", "Clicked")
-                showDialog(order.cartItemList!!)
+            //TRack Order
+            layoutBinding.btnTrackOrder.setOnClickListener {
+                EventBus.getDefault().postSticky(TrackingOrderEvent(position))
             }
 
             /*setListener(object : IRecyclerItemClickListener {
@@ -125,11 +131,11 @@ class MyOrderAdapter(var context: Context, var orderList: MutableList<Order>):
 
     override fun getItemCount(): Int = orderList.size
 
-    fun getItemAtPosition(position: Int): Order{
+    fun getItemAtPosition(position: Int): OrderModel{
         return orderList[position]
     }
 
-    fun setItemAtPosition(position: Int, order: Order){
+    fun setItemAtPosition(position: Int, order: OrderModel){
         orderList[position] = order
     }
 }

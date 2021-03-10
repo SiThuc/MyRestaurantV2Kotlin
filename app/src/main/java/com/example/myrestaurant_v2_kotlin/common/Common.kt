@@ -20,22 +20,23 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.example.myrestaurant_v2_kotlin.R
 import com.example.myrestaurant_v2_kotlin.model.*
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.database.FirebaseDatabase
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.util.*
 
 object Common {
-    fun updateToken(context: Context, token:String){
+    fun updateToken(context: Context, token: String) {
         FirebaseDatabase.getInstance()
-            .getReference(TOKEN_REF)
-            .child(currentUser!!.uid)
-            .setValue(TokenModel(currentUser!!.phone!!, token))
-            .addOnFailureListener { e -> Toast.makeText(context, ""+e.message, Toast.LENGTH_SHORT).show() }
+                .getReference(TOKEN_REF)
+                .child(currentUser!!.uid)
+                .setValue(TokenModel(currentUser!!.phone!!, token))
+                .addOnFailureListener { e -> Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show() }
     }
 
-    fun getDateOfWeek(i: Int):String{
-        when(i){
+    fun getDateOfWeek(i: Int): String {
+        when (i) {
             1 -> return "Monday"
             2 -> return "Tuesday"
             3 -> return "Wednesday"
@@ -91,7 +92,7 @@ object Common {
     }
 
     fun convertStatusToText(orderStatus: Int): String {
-        when(orderStatus){
+        when (orderStatus) {
             0 -> return "Placed"
             1 -> return "Shipping"
             2 -> return "Shipped"
@@ -104,8 +105,8 @@ object Common {
     @RequiresApi(Build.VERSION_CODES.O)
     fun showNotification(context: Context, id: Int, title: String?, content: String?, intent: Intent?) {
         Log.d("Notification", "Tittle:$title, Content:$content")
-        var pendingIntent: PendingIntent?= null
-        if(intent != null){
+        var pendingIntent: PendingIntent? = null
+        if (intent != null) {
             pendingIntent = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
             val NOTIFICATION_CHANNEL_ID = "pham.thuc.myrestaurantv2"
@@ -123,10 +124,10 @@ object Common {
 
             val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             builder.setContentTitle(title).setContentText(content).setAutoCancel(true)
-                .setSmallIcon(R.mipmap.ic_launcher_round)
-                .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_restaurant_24))
+                    .setSmallIcon(R.mipmap.ic_launcher_round)
+                    .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_restaurant_24))
 
-            if(pendingIntent != null)
+            if (pendingIntent != null)
                 builder.setContentIntent(pendingIntent)
 
             val notification = builder.build()
@@ -140,7 +141,46 @@ object Common {
         return java.lang.StringBuilder("/topics/new_order").toString()
     }
 
-    var currentToken: String? = null
+    fun decodePoly(encoded: String): List<LatLng> {
+        val poly: MutableList<LatLng> = ArrayList<LatLng>()
+        var index = 0
+        var len = encoded.length
+        var lat = 0
+        var lng = 0
+        while (index < len) {
+            var b: Int
+            var shift = 0
+            var result = 0
+
+            do {
+                b = encoded[index++].toInt() - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+
+            val dlat = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lat += dlat
+            shift = 0
+            result = 0
+
+            do {
+                b = encoded[index++].toInt() - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+
+            val dlng = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lng += dlng
+            val p = LatLng(lat.toDouble() / 1E5, lng.toDouble() / 1E5)
+            poly.add(p)
+        }
+        return poly
+    }
+
+    val REFUND_REQUEST_REF: String = "RefundRequests"
+    var currentShipperOrder: ShipperOrderModel? = null
+    val SHIPPING_ORDER_REF: String = "ShipperOrders"
+    var currentToken: String = ""
     val NOTI_CONTENT: String = "Content"
     val NOTI_TITLE: String = "Title"
     val TOKEN_REF: String = "Tokens"
