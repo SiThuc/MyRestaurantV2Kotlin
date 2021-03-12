@@ -79,13 +79,13 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
     lateinit var listener: ILoadTimeFromFirebaseCallback
 
     private var placeSelected: Place? = null
-    private var places_fragment: AutocompleteSupportFragment? = null
+    private var placesFragment: AutocompleteSupportFragment? = null
     private lateinit var placeClient: PlacesClient
     private val placeFields = Arrays.asList(
-        Place.Field.ID,
-        Place.Field.NAME,
-        Place.Field.ADDRESS,
-        Place.Field.LAT_LNG
+            Place.Field.ID,
+            Place.Field.NAME,
+            Place.Field.ADDRESS,
+            Place.Field.LAT_LNG
     )
 
 
@@ -94,25 +94,25 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
         calculateTotalPrice()
 
         if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
+                        requireContext(),
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
         if (fusedLocationProviderClient != null)
             fusedLocationProviderClient.requestLocationUpdates(
-                locationRequest, locationCallBack,
-                Looper.getMainLooper()
+                    locationRequest, locationCallBack,
+                    Looper.getMainLooper()
             )
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+            inflater: LayoutInflater, container: ViewGroup?,
+            savedInstanceState: Bundle?
     ): View? {
         EventBus.getDefault().postSticky(HideFABCart(true))
         viewModel = ViewModelProvider(this).get(CartViewModel::class.java)
@@ -146,21 +146,21 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
         buildLocationRequest()
         buildLocationCallback()
         fusedLocationProviderClient =
-            LocationServices.getFusedLocationProviderClient(requireContext())
+                LocationServices.getFusedLocationProviderClient(requireContext())
 
         if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
+                        requireContext(),
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
         fusedLocationProviderClient.requestLocationUpdates(
-            locationRequest, locationCallBack,
-            Looper.getMainLooper()
+                locationRequest, locationCallBack,
+                Looper.getMainLooper()
         )
     }
 
@@ -193,10 +193,10 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
         val layoutManager = LinearLayoutManager(context)
         fragmentBinding.recyclerCart.layoutManager = layoutManager
         fragmentBinding.recyclerCart.addItemDecoration(
-            DividerItemDecoration(
-                context,
-                layoutManager.orientation
-            )
+                DividerItemDecoration(
+                        context,
+                        layoutManager.orientation
+                )
         )
 
 
@@ -206,9 +206,12 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
             builder.setTitle("One more step")
             val alertDialogBinding = LayoutPlaceOrderBinding.inflate(LayoutInflater.from(context))
 
-            places_fragment = requireActivity().supportFragmentManager.findFragmentById(R.id.places_autocomplete_fragment) as AutocompleteSupportFragment
-            places_fragment!!.setPlaceFields(placeFields)
-            places_fragment!!.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+            placesFragment = requireActivity().supportFragmentManager.findFragmentById(R.id.places_fragment) as? AutocompleteSupportFragment
+
+            //places_fragment = requireActivity().supportFragmentManager.findFragmentById(R.id.places_fragment) as AutocompleteSupportFragment
+
+            placesFragment!!.setPlaceFields(placeFields)
+            placesFragment!!.setOnPlaceSelectedListener(object : PlaceSelectionListener {
                 override fun onPlaceSelected(p0: Place) {
                     placeSelected = p0
                     alertDialogBinding.txtDetailAddress.text = placeSelected!!.address
@@ -232,7 +235,7 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
             //If the RadioButton Other is checked
             alertDialogBinding.rdiDeliOther.setOnCheckedChangeListener { buttonView, isChecked ->
                 if (isChecked) {
-                   alertDialogBinding.txtDetailAddress.text = ""
+                    alertDialogBinding.txtDetailAddress.text = ""
                 }
             }
 
@@ -240,56 +243,56 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
             alertDialogBinding.rdiDeliThisAddress.setOnCheckedChangeListener { buttonView, isChecked ->
                 if (isChecked) {
                     if (ActivityCompat.checkSelfPermission(
-                            requireContext(),
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                            requireContext(),
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        ) != PackageManager.PERMISSION_GRANTED
+                                    requireContext(),
+                                    Manifest.permission.ACCESS_FINE_LOCATION
+                            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                                    requireContext(),
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) != PackageManager.PERMISSION_GRANTED
                     ) {
                     }
                     fusedLocationProviderClient.lastLocation
-                        .addOnFailureListener { e ->
-                            alertDialogBinding.txtDetailAddress.visibility = View.GONE
-                            Toast.makeText(requireContext(), "" + e.message, Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                        .addOnCompleteListener { task ->
-                            val coordinates = java.lang.StringBuilder()
-                                .append(task.result.latitude)
-                                .append("/")
-                                .append(task.result.longitude)
-                                .toString()
+                            .addOnFailureListener { e ->
+                                alertDialogBinding.txtDetailAddress.visibility = View.GONE
+                                Toast.makeText(requireContext(), "" + e.message, Toast.LENGTH_SHORT)
+                                        .show()
+                            }
+                            .addOnCompleteListener { task ->
+                                val coordinates = java.lang.StringBuilder()
+                                        .append(task.result.latitude)
+                                        .append("/")
+                                        .append(task.result.longitude)
+                                        .toString()
 
-                            val singleAddress = Single.just(
-                                getAddressFromLatLng(
-                                    task.result.latitude,
-                                    task.result.longitude
+                                val singleAddress = Single.just(
+                                        getAddressFromLatLng(
+                                                task.result.latitude,
+                                                task.result.longitude
+                                        )
                                 )
-                            )
-                            val disposable = singleAddress.subscribeWith(object :
-                                DisposableSingleObserver<String>() {
-                                override fun onSuccess(t: String) {
-                                    alertDialogBinding.txtDetailAddress.text = t
-                                }
+                                val disposable = singleAddress.subscribeWith(object :
+                                        DisposableSingleObserver<String>() {
+                                    override fun onSuccess(t: String) {
+                                        alertDialogBinding.txtDetailAddress.text = t
+                                    }
 
-                                override fun onError(e: Throwable) {
-                                    alertDialogBinding.txtDetailAddress.text = e.message
-                                }
-                            })
-                        }
+                                    override fun onError(e: Throwable) {
+                                        alertDialogBinding.txtDetailAddress.text = e.message
+                                    }
+                                })
+                            }
                 }
             }
 
             builder.setView(alertDialogBinding.root)
             builder.setNegativeButton("NO", { dialog, _ -> dialog.dismiss() })
-                .setPositiveButton("YES", { dialog, _ ->
-                    if (alertDialogBinding.rdiPayCod.isChecked)
-                        paymentCOD(
-                            alertDialogBinding.txtDetailAddress.text.toString(),
-                            alertDialogBinding.edtComment.text.toString()
-                        )
-                })
+                    .setPositiveButton("YES", { dialog, _ ->
+                        if (alertDialogBinding.rdiPayCod.isChecked)
+                            paymentCOD(
+                                    alertDialogBinding.txtDetailAddress.text.toString(),
+                                    alertDialogBinding.edtComment.text.toString()
+                            )
+                    })
             val dialog = builder.create()
             dialog.show()
         }
@@ -319,55 +322,55 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
 
     private fun paymentCOD(address: String, comment: String) {
         compositeDisposable.add(
-            cartDataSource!!.getAllCart(Common.currentUser!!.uid)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ cartItemList ->
-                    // When we have all cartItems, we will get total price
-                    cartDataSource!!.sumPrice(Common.currentUser!!.uid)
+                cartDataSource!!.getAllCart(Common.currentUser!!.uid)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(object : SingleObserver<Double> {
-                            override fun onSubscribe(d: Disposable) {
-                            }
+                        .subscribe({ cartItemList ->
+                            // When we have all cartItems, we will get total price
+                            cartDataSource!!.sumPrice(Common.currentUser!!.uid)
+                                    .subscribeOn(Schedulers.io())
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe(object : SingleObserver<Double> {
+                                        override fun onSubscribe(d: Disposable) {
+                                        }
 
-                            override fun onSuccess(t: Double) {
-                                val finalPrice = t
-                                val order = OrderModel()
-                                order.userId = Common.currentUser!!.uid
-                                order.userName = Common.currentUser!!.name
-                                order.userPhone = Common.currentUser!!.phone
-                                order.shippingAddress = address
-                                order.comment = comment
+                                        override fun onSuccess(t: Double) {
+                                            val finalPrice = t
+                                            val order = OrderModel()
+                                            order.userId = Common.currentUser!!.uid
+                                            order.userName = Common.currentUser!!.name
+                                            order.userPhone = Common.currentUser!!.phone
+                                            order.shippingAddress = address
+                                            order.comment = comment
 
-                                if (currentLocation != null) {
-                                    order.lat = currentLocation.latitude
-                                    order.lng = currentLocation.longitude
-                                }
+                                            if (currentLocation != null) {
+                                                order.lat = currentLocation.latitude
+                                                order.lng = currentLocation.longitude
+                                            }
 
-                                order.cartItemList = cartItemList
-                                order.totalPayment = t
-                                order.finalPayment = finalPrice
-                                order.discount = 0
-                                order.cod = true
-                                order.transactionId = "Cash On Delivery"
+                                            order.cartItemList = cartItemList
+                                            order.totalPayment = t
+                                            order.finalPayment = finalPrice
+                                            order.discount = 0
+                                            order.cod = true
+                                            order.transactionId = "Cash On Delivery"
 
-                                // Submit to FIrebase
-                                syncLocalTimeWithServerTime(order)
-                                //writeOrderToFirebase(order)
-                            }
+                                            // Submit to FIrebase
+                                            syncLocalTimeWithServerTime(order)
+                                            //writeOrderToFirebase(order)
+                                        }
 
-                            override fun onError(t: Throwable) {
-                                Toast.makeText(
-                                    context,
-                                    "[SUM CART]" + t.message,
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                                        override fun onError(t: Throwable) {
+                                            Toast.makeText(
+                                                    context,
+                                                    "[SUM CART]" + t.message,
+                                                    Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    })
+                        }, { throwable ->
+                            Toast.makeText(context, "" + throwable.message, Toast.LENGTH_SHORT).show()
                         })
-                }, { throwable ->
-                    Toast.makeText(context, "" + throwable.message, Toast.LENGTH_SHORT).show()
-                })
         )
     }
 
@@ -392,63 +395,63 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
 
     private fun writeOrderToFirebase(order: OrderModel) {
         FirebaseDatabase.getInstance()
-            .getReference(Common.ORDER_REF)
-            .child(Common.createOrderNumber())
-            .setValue(order)
-            .addOnFailureListener { e ->
-                Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show()
-            }
-            .addOnCompleteListener { task ->
-                //Clean cart
-                if (task.isSuccessful) {
-                    cartDataSource!!.cleanCart(Common.currentUser!!.uid)
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(object : SingleObserver<Int> {
-                            override fun onSubscribe(d: Disposable) {
-
-                            }
-
-                            override fun onSuccess(t: Int) {
-                                val data2Send = HashMap<String, String>()
-                                data2Send[Common.NOTI_TITLE] = "New Order"
-                                data2Send[Common.NOTI_CONTENT] = "You have new order from " + Common.currentUser!!.phone
-                                val sendData = FCMSendData(Common.getNewOrderTopic(), data2Send)
-                                compositeDisposable.add(
-                                    ifcmService.sendNotification(sendData)
-                                        .subscribeOn(Schedulers.io())
-                                        .observeOn(AndroidSchedulers.mainThread())
-                                        .subscribe({ fcmResponse ->
-                                            if (fcmResponse.success != 0)
-                                                Toast.makeText(
-                                                    requireContext(),
-                                                    "Order placed successfully",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                        }, { throwable ->
-                                            Toast.makeText(
-                                                requireContext(),
-                                                "Order was sent but notification failed",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                        )
-                                )
-
-                                Toast.makeText(
-                                    context,
-                                    "Order placed successfully!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-
-                            override fun onError(e: Throwable) {
-                                Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show()
-                            }
-
-                        })
+                .getReference(Common.ORDER_REF)
+                .child(Common.createOrderNumber())
+                .setValue(order)
+                .addOnFailureListener { e ->
+                    Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show()
                 }
-            }
+                .addOnCompleteListener { task ->
+                    //Clean cart
+                    if (task.isSuccessful) {
+                        cartDataSource!!.cleanCart(Common.currentUser!!.uid)
+                                .subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(object : SingleObserver<Int> {
+                                    override fun onSubscribe(d: Disposable) {
+
+                                    }
+
+                                    override fun onSuccess(t: Int) {
+                                        val data2Send = HashMap<String, String>()
+                                        data2Send[Common.NOTI_TITLE] = "New Order"
+                                        data2Send[Common.NOTI_CONTENT] = "You have new order from " + Common.currentUser!!.phone
+                                        val sendData = FCMSendData(Common.getNewOrderTopic(), data2Send)
+                                        compositeDisposable.add(
+                                                ifcmService.sendNotification(sendData)
+                                                        .subscribeOn(Schedulers.io())
+                                                        .observeOn(AndroidSchedulers.mainThread())
+                                                        .subscribe({ fcmResponse ->
+                                                            if (fcmResponse.success != 0)
+                                                                Toast.makeText(
+                                                                        requireContext(),
+                                                                        "Order placed successfully",
+                                                                        Toast.LENGTH_SHORT
+                                                                ).show()
+                                                        }, { throwable ->
+                                                            Toast.makeText(
+                                                                    requireContext(),
+                                                                    "Order was sent but notification failed",
+                                                                    Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                        )
+                                        )
+
+                                        Toast.makeText(
+                                                context,
+                                                "Order placed successfully!",
+                                                Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+
+                                    override fun onError(e: Throwable) {
+                                        Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show()
+                                    }
+
+                                })
+                    }
+                }
     }
 
     override fun onStart() {
@@ -479,50 +482,50 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
         if (event.cartItem != null) {
             recyclerViewState = fragmentBinding.recyclerCart.layoutManager!!.onSaveInstanceState()
             cartDataSource!!.updateCart(event.cartItem)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(object : SingleObserver<Int> {
-                    override fun onSubscribe(d: Disposable) {
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(object : SingleObserver<Int> {
+                        override fun onSubscribe(d: Disposable) {
 
-                    }
+                        }
 
-                    override fun onSuccess(t: Int) {
-                        calculateTotalPrice();
-                        fragmentBinding.recyclerCart.layoutManager!!.onRestoreInstanceState(
-                            recyclerViewState
-                        )
-                    }
+                        override fun onSuccess(t: Int) {
+                            calculateTotalPrice();
+                            fragmentBinding.recyclerCart.layoutManager!!.onRestoreInstanceState(
+                                    recyclerViewState
+                            )
+                        }
 
-                    override fun onError(e: Throwable) {
-                        Toast.makeText(context, "[UPDATE CART] " + e.message, Toast.LENGTH_SHORT)
-                            .show()
-                    }
+                        override fun onError(e: Throwable) {
+                            Toast.makeText(context, "[UPDATE CART] " + e.message, Toast.LENGTH_SHORT)
+                                    .show()
+                        }
 
-                })
+                    })
         }
     }
 
     private fun calculateTotalPrice() {
         cartDataSource!!.sumPrice(Common.currentUser!!.uid)
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(object : SingleObserver<Double> {
-                override fun onSubscribe(d: Disposable) {
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(object : SingleObserver<Double> {
+                    override fun onSubscribe(d: Disposable) {
 
-                }
+                    }
 
-                override fun onSuccess(t: Double) {
-                    fragmentBinding.txtTotalPrice.text = StringBuilder("€")
-                        .append(Common.formatPrice(t))
-                }
+                    override fun onSuccess(t: Double) {
+                        fragmentBinding.txtTotalPrice.text = StringBuilder("€")
+                                .append(Common.formatPrice(t))
+                    }
 
-                override fun onError(e: Throwable) {
-                    if (!e.message!!.contains("Query returned empty"))
-                        Toast.makeText(context, "[SUM CART]" + e.message, Toast.LENGTH_SHORT).show()
+                    override fun onError(e: Throwable) {
+                        if (!e.message!!.contains("Query returned empty"))
+                            Toast.makeText(context, "[SUM CART]" + e.message, Toast.LENGTH_SHORT).show()
 
-                }
+                    }
 
-            })
+                })
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -533,23 +536,23 @@ class CartFragment : Fragment(), ILoadTimeFromFirebaseCallback {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.action_clear_cart) {
             cartDataSource!!.cleanCart(Common.currentUser!!.uid)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(object : SingleObserver<Int> {
-                    override fun onSubscribe(d: Disposable) {
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(object : SingleObserver<Int> {
+                        override fun onSubscribe(d: Disposable) {
 
-                    }
+                        }
 
-                    override fun onSuccess(t: Int) {
-                        Toast.makeText(context, "Clear Cart Success", Toast.LENGTH_SHORT)
-                        EventBus.getDefault().postSticky(CountCartEvent(true))
-                    }
+                        override fun onSuccess(t: Int) {
+                            Toast.makeText(context, "Clear Cart Success", Toast.LENGTH_SHORT)
+                            EventBus.getDefault().postSticky(CountCartEvent(true))
+                        }
 
-                    override fun onError(e: Throwable) {
-                        Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show()
-                    }
+                        override fun onError(e: Throwable) {
+                            Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show()
+                        }
 
-                })
+                    })
         }
         return true
         return super.onOptionsItemSelected(item)

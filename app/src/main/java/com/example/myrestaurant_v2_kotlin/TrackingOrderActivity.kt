@@ -1,15 +1,19 @@
 package com.example.myrestaurant_v2_kotlin
 
+import android.animation.ValueAnimator
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
+import android.view.animation.LinearInterpolator
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.example.myrestaurant_v2_kotlin.common.Common
+import com.example.myrestaurant_v2_kotlin.model.ShipperOrderModel
 import com.example.myrestaurant_v2_kotlin.remote.IGoogleAPI
 import com.example.myrestaurant_v2_kotlin.remote.RetrofitGoogleAPIClient
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -18,6 +22,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.google.firebase.database.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -25,17 +30,32 @@ import org.json.JSONObject
 import java.lang.Exception
 import kotlin.text.StringBuilder
 
-class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback {
+class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback, ValueEventListener {
 
     private lateinit var mMap: GoogleMap
     private var shipperMarker: Marker? = null
     private var polylineOptions: PolylineOptions? = null
     private var blackPolylineOptions: PolylineOptions? = null
+    private var blackPolyline: Polyline? = null
+    private var grayPolyline: Polyline? = null
     private var yellowPolyline: Polyline? = null
     private var polylineList: List<LatLng> = ArrayList()
 
     private lateinit var iGoogleAPI: IGoogleAPI
     private val compositeDisposable = CompositeDisposable()
+
+    private lateinit var shipperRef: DatabaseReference
+    private var isInit = false  //isInist must be false for first time
+
+    //Move maker
+    private var handler: Handler? = null
+    private var index = 0
+    private var next: Int = 0
+    private var v = 0f
+    private var lat = 0.0
+    private var lng = 0.0
+    private var startPosition = LatLng(0.0, 0.0)
+    private var endPosition = LatLng(0.0, 0.0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +67,15 @@ class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
                 .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        subscribeShipperMove()
+    }
+
+    private fun subscribeShipperMove() {
+        shipperRef = FirebaseDatabase.getInstance()
+                .getReference(Common.SHIPPING_ORDER_REF)
+                .child(Common.currentShipperOrder!!.key!!)
+        shipperRef.addValueEventListener(this)
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -106,36 +135,36 @@ class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback {
                 .toString()
 
         compositeDisposable.add(iGoogleAPI!!.getDirections(
-                        "driving", "less_driving", from, to,
-                        getString(R.string.google_maps_key))!!
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe({ s ->
-                            try {
-                                val jsonObject = JSONObject(s)
-                                val jsonArray = jsonObject.getJSONArray("routes")
-                                for (i in 0 until jsonArray.length()) {
-                                    val route = jsonArray.getJSONObject(i)
-                                    val poly = route.getJSONObject("overview_polyline")
-                                    val polyline = poly.getString("points")
-                                    polylineList = Common.decodePoly(polyline)
-                                }
+                "driving", "less_driving", from, to,
+                getString(R.string.google_maps_key))!!
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ s ->
+                    try {
+                        val jsonObject = JSONObject(s)
+                        val jsonArray = jsonObject.getJSONArray("routes")
+                        for (i in 0 until jsonArray.length()) {
+                            val route = jsonArray.getJSONObject(i)
+                            val poly = route.getJSONObject("overview_polyline")
+                            val polyline = poly.getString("points")
+                            polylineList = Common.decodePoly(polyline)
+                        }
 
-                                polylineOptions = PolylineOptions()
-                                polylineOptions!!.color(Color.YELLOW)
-                                polylineOptions!!.width(12.0f)
-                                polylineOptions!!.startCap(SquareCap())
-                                polylineOptions!!.endCap(SquareCap())
-                                polylineOptions!!.jointType(JointType.ROUND)
-                                polylineOptions!!.addAll(polylineList)
-                                yellowPolyline = mMap.addPolyline(polylineOptions)
-                            } catch (e: Exception) {
-                                Log.d("DEBUG", e.message.toString())
-                            }
+                        polylineOptions = PolylineOptions()
+                        polylineOptions!!.color(Color.YELLOW)
+                        polylineOptions!!.width(12.0f)
+                        polylineOptions!!.startCap(SquareCap())
+                        polylineOptions!!.endCap(SquareCap())
+                        polylineOptions!!.jointType(JointType.ROUND)
+                        polylineOptions!!.addAll(polylineList)
+                        yellowPolyline = mMap.addPolyline(polylineOptions)
+                    } catch (e: Exception) {
+                        Log.d("DEBUG", e.message.toString())
+                    }
 
-                        }, { t ->
-                            Toast.makeText(this@TrackingOrderActivity, t.message.toString(), Toast.LENGTH_SHORT).show()
-                        })
+                }, { t ->
+                    Toast.makeText(this@TrackingOrderActivity, t.message.toString(), Toast.LENGTH_SHORT).show()
+                })
         )
 
     }
@@ -143,5 +172,140 @@ class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onStop() {
         compositeDisposable.clear()
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        shipperRef.removeEventListener(this)
+        isInit = false
+        super.onDestroy()
+    }
+
+    override fun onDataChange(snapshot: DataSnapshot) {
+        //Save old position
+        val from = StringBuilder().append(Common.currentShipperOrder!!.currentLat)
+                .append(",")
+                .append(Common.currentShipperOrder!!.currentLng).toString()
+
+        //Update position
+        Common.currentShipperOrder = snapshot.getValue(ShipperOrderModel::class.java)
+        Common.currentShipperOrder!!.key = snapshot.key
+
+        //Save new position
+        val to = StringBuilder().append(Common.currentShipperOrder!!.currentLat)
+                .append(",")
+                .append(Common.currentShipperOrder!!.currentLng).toString()
+
+        if(snapshot.exists())
+            if(isInit)
+                moveMarkerAnimation(shipperMarker, from, to)
+            else
+                isInit = true
+    }
+
+    private fun moveMarkerAnimation(shipperMarker: Marker?, from: String, to: String) {
+        compositeDisposable.addAll(
+                iGoogleAPI!!.getDirections("driving", "less_driving", from, to, getString(R.string.google_maps_key))!!
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({ s ->
+                            Log.d("DEBUG", s!!)
+                            try {
+                                val jsonObject = JSONObject(s)
+                                val jsonArray = jsonObject.getJSONArray("routes")
+                                for (i in 0 until jsonArray.length()) {
+                                    val route = jsonArray.getJSONObject(i)
+                                    val poly = route.getJSONObject("overview_polyline")
+                                    val polyline = poly.getString("points")
+
+                                    polylineList = Common.decodePoly(polyline)
+                                }
+
+                                polylineOptions = PolylineOptions()
+                                polylineOptions!!.color(Color.GRAY)
+                                polylineOptions!!.width(5.0f)
+                                polylineOptions!!.startCap(SquareCap())
+                                polylineOptions!!.endCap(SquareCap())
+                                polylineOptions!!.jointType(JointType.ROUND)
+                                polylineOptions!!.addAll(polylineList)
+                                grayPolyline = mMap.addPolyline(polylineOptions)
+
+                                blackPolylineOptions = PolylineOptions()
+                                blackPolylineOptions!!.color(Color.BLACK)
+                                blackPolylineOptions!!.width(5.0f)
+                                blackPolylineOptions!!.startCap(SquareCap())
+                                blackPolylineOptions!!.endCap(SquareCap())
+                                blackPolylineOptions!!.jointType(JointType.ROUND)
+                                blackPolylineOptions!!.addAll(polylineList)
+                                blackPolyline = mMap.addPolyline(blackPolylineOptions)
+
+
+                                //Animator
+                                val polylineAnimator = ValueAnimator.ofInt(0, 100)
+                                polylineAnimator.duration = 2000
+                                polylineAnimator.interpolator = LinearInterpolator()
+                                polylineAnimator.addUpdateListener { valueAnimator ->
+                                    val points = grayPolyline!!.points
+                                    val percentValue =
+                                            Integer.parseInt(valueAnimator.animatedValue.toString())
+                                    val size = points.size
+                                    val newPoints = (size * (percentValue / 100.0f).toInt())
+                                    val p = points.subList(0, newPoints)
+                                    blackPolyline!!.points = p
+                                }
+                                polylineAnimator.start()
+
+                                //Car moving
+                                index = -1
+                                next = 1
+                                val r = object : Runnable {
+                                    override fun run() {
+                                        if (index < polylineList.size - 1) {
+                                            index++
+                                            next = index + 1
+                                            startPosition = polylineList[index]
+                                            endPosition = polylineList[next]
+                                        }
+
+                                        val valueAnimator = ValueAnimator.ofInt(0, 1)
+                                        valueAnimator.duration = 1500
+                                        valueAnimator.interpolator = LinearInterpolator()
+                                        valueAnimator.addUpdateListener { valueAnimator ->
+                                            v = valueAnimator.animatedFraction
+                                            lat =
+                                                    v * endPosition!!.latitude + (1 - v) * startPosition!!.latitude
+                                            lng =
+                                                    v * endPosition!!.longitude + (1 - v) * startPosition!!.longitude
+
+                                            val newPos = LatLng(lat, lng)
+                                            shipperMarker!!.position = newPos
+                                            shipperMarker.setAnchor(0.5f, 0.5f)
+                                            shipperMarker.rotation = Common.getBearing(startPosition!!, newPos)
+
+                                            mMap.moveCamera(CameraUpdateFactory.newLatLng(shipperMarker.position)) //Fixed
+                                        }
+
+                                        valueAnimator.start()
+                                        if (index < polylineList.size - 2)
+                                            handler!!.postDelayed(this, 1500)
+                                    }
+
+                                }
+
+                                handler = Handler()
+                                handler!!.postDelayed(r, 1500)
+
+                            } catch (e: Exception) {
+                                Log.d("DEBUG", e.message.toString())
+                            }
+
+                        }, { throwable ->
+                            Toast.makeText(this@TrackingOrderActivity, throwable.message, Toast.LENGTH_SHORT)
+                                    .show()
+                        })
+        )
+    }
+
+    override fun onCancelled(error: DatabaseError) {
+
     }
 }

@@ -28,11 +28,13 @@ import java.util.*
 
 object Common {
     fun updateToken(context: Context, token: String) {
-        FirebaseDatabase.getInstance()
-                .getReference(TOKEN_REF)
-                .child(currentUser!!.uid)
-                .setValue(TokenModel(currentUser!!.phone!!, token))
-                .addOnFailureListener { e -> Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show() }
+        //Fix Error crash first time
+        if (currentUser != null)
+            FirebaseDatabase.getInstance()
+                    .getReference(TOKEN_REF)
+                    .child(currentUser!!.uid)
+                    .setValue(TokenModel(currentUser!!.phone!!, token))
+                    .addOnFailureListener { e -> Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show() }
     }
 
     fun getDateOfWeek(i: Int): String {
@@ -175,6 +177,22 @@ object Common {
             poly.add(p)
         }
         return poly
+    }
+
+    fun getBearing(begin: LatLng, end: LatLng): Float {
+        val lat = Math.abs(begin.latitude - end.latitude)
+        val lng = Math.abs(begin.longitude - end.longitude)
+
+        if (begin.latitude < end.latitude && begin.longitude < end.longitude)
+            return Math.toDegrees(Math.atan(lng / lat)).toFloat()
+        else if (begin.latitude >= end.latitude && begin.longitude < end.longitude)
+            return (90 - Math.toDegrees(Math.atan(lng / lat)) + 90).toFloat()
+        else if (begin.latitude >= end.latitude && begin.longitude >= end.longitude)
+            return (Math.toDegrees(Math.atan(lng / lat)) + 180).toFloat()
+        else if (begin.latitude < end.latitude && begin.longitude >= end.longitude)
+            return (90 - Math.toDegrees(Math.atan(lng / lat)) + 270).toFloat()
+        return -1.0f
+
     }
 
     val REFUND_REQUEST_REF: String = "RefundRequests"

@@ -260,6 +260,7 @@ class ViewOrderFragment : Fragment(), ILoadOrderCallbackListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     if (snapshot.exists()) { // If there are a shipperOrder
                         Common.currentShipperOrder = snapshot.getValue(ShipperOrderModel::class.java)
+                        Common.currentShipperOrder!!.key = snapshot.key
                         if (Common.currentShipperOrder!!.currentLat != -1.0 &&
                             Common.currentShipperOrder!!.currentLng != -1.0) {
                             startActivity(Intent(requireContext(), TrackingOrderActivity::class.java))
