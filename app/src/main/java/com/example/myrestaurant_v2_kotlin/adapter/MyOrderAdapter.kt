@@ -19,6 +19,7 @@ import com.example.myrestaurant_v2_kotlin.database.CartItem
 import com.example.myrestaurant_v2_kotlin.databinding.LayoutDialogOrderDetailBinding
 import com.example.myrestaurant_v2_kotlin.databinding.LayoutOrderItemBinding
 import com.example.myrestaurant_v2_kotlin.eventbus.CancelOrderEvent
+import com.example.myrestaurant_v2_kotlin.eventbus.RepeatOrderEvent
 import com.example.myrestaurant_v2_kotlin.eventbus.TrackingOrderEvent
 import com.example.myrestaurant_v2_kotlin.model.OrderModel
 import org.greenrobot.eventbus.EventBus
@@ -94,6 +95,13 @@ class MyOrderAdapter(var context: Context, var orderList: MutableList<OrderModel
             layoutBinding.btnTrackOrder.setOnClickListener {
                 EventBus.getDefault().postSticky(TrackingOrderEvent(position))
             }
+
+            //Repeat Order
+            layoutBinding.btnRepeatOrder.setOnClickListener {
+                EventBus.getDefault().postSticky(RepeatOrderEvent(position))
+            }
+
+
 
             /*setListener(object : IRecyclerItemClickListener {
                 override fun onItemClick(view: View, pos: Int) {

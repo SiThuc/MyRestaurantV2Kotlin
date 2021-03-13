@@ -18,11 +18,12 @@ import com.example.myrestaurant_v2_kotlin.TrackingOrderActivity
 import com.example.myrestaurant_v2_kotlin.adapter.MyOrderAdapter
 import com.example.myrestaurant_v2_kotlin.callback.ILoadOrderCallbackListener
 import com.example.myrestaurant_v2_kotlin.common.Common
+import com.example.myrestaurant_v2_kotlin.database.CartDataSource
+import com.example.myrestaurant_v2_kotlin.database.CartDatabase
+import com.example.myrestaurant_v2_kotlin.database.LocalCartDataSource
 import com.example.myrestaurant_v2_kotlin.databinding.FragmentViewOrderBinding
 import com.example.myrestaurant_v2_kotlin.databinding.LayoutRefundRequestBinding
-import com.example.myrestaurant_v2_kotlin.eventbus.CancelOrderEvent
-import com.example.myrestaurant_v2_kotlin.eventbus.MenuItemBack
-import com.example.myrestaurant_v2_kotlin.eventbus.TrackingOrderEvent
+import com.example.myrestaurant_v2_kotlin.eventbus.*
 import com.example.myrestaurant_v2_kotlin.model.OrderModel
 import com.example.myrestaurant_v2_kotlin.model.RefundRequestModel
 import com.example.myrestaurant_v2_kotlin.model.ShipperOrderModel
@@ -31,6 +32,11 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import dmax.dialog.SpotsDialog
+import io.reactivex.SingleObserver
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.disposables.Disposable
+import io.reactivex.schedulers.Schedulers
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -42,6 +48,9 @@ class ViewOrderFragment : Fragment(), ILoadOrderCallbackListener {
 
     private lateinit var viewModel: ViewOrderViewModel
     private lateinit var binding: FragmentViewOrderBinding
+
+    lateinit var cartDataSource: CartDataSource
+    var compositeDisposable = CompositeDisposable()
 
     lateinit var dialog: AlertDialog
     lateinit var listener: ILoadOrderCallbackListener
@@ -91,6 +100,7 @@ class ViewOrderFragment : Fragment(), ILoadOrderCallbackListener {
     }
 
     private fun initViews() {
+        cartDataSource = LocalCartDataSource(CartDatabase.getInstance(requireContext()).cartDao())
         listener = this
         dialog = SpotsDialog.Builder().setContext(context).setCancelable(false).build()
 
@@ -124,6 +134,7 @@ class ViewOrderFragment : Fragment(), ILoadOrderCallbackListener {
 
     override fun onDestroy() {
         EventBus.getDefault().postSticky(MenuItemBack())
+        compositeDisposable.clear()
 
         if (EventBus.getDefault().isRegistered(this))
             EventBus.getDefault().unregister(this)
@@ -277,5 +288,52 @@ class ViewOrderFragment : Fragment(), ILoadOrderCallbackListener {
                 }
             })
     }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    fun onRepeatOrderEvent(event: RepeatOrderEvent) {
+        val orderModel = (binding.recyclerOrder.adapter as MyOrderAdapter).getItemAtPosition(event.position)
+
+        dialog.show()
+
+        //First, clear all item in cart
+        cartDataSource.cleanCart(Common.currentUser!!.uid)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(object : SingleObserver<Int> {
+                    override fun onSubscribe(d: Disposable) {
+
+                    }
+
+                    override fun onSuccess(t: Int) {
+                        //After clean cart, just add new
+                        val cartItems = orderModel.cartItemList!!.toTypedArray()
+
+                        compositeDisposable.add(
+                                cartDataSource.insertOrReplaceAll(*cartItems) //* mean insert many item as we need
+                                        .subscribeOn(Schedulers.io())
+                                        .observeOn(AndroidSchedulers.mainThread())
+                                        .subscribe({
+                                            dialog.dismiss()
+                                            EventBus.getDefault().postSticky(CountCartEvent(true))
+                                            Toast.makeText(requireContext(), "Add all item to cart success", Toast.LENGTH_SHORT).show()
+                                        }, {
+                                            dialog.dismiss()
+                                            Toast.makeText(requireContext(), "Add all item to cart Failed", Toast.LENGTH_SHORT).show()
+                                        })
+
+                        )
+
+                    }
+
+                    override fun onError(e: Throwable) {
+                        dialog.dismiss()
+                        Toast.makeText(requireContext(), e.message, Toast.LENGTH_SHORT).show()
+                    }
+                })
+    }
+
+
+
+
 
 }

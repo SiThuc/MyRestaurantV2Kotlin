@@ -27,6 +27,15 @@
             android:background="@android:color/holo_orange_dark"
             android:text="Cancel Order"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btn_repeat_order"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:background="@android:color/holo_blue_dark"
+            android:text="Repeat Order"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <androidx.cardview.widget.CardView
