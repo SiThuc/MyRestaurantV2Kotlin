@@ -143,8 +143,7 @@ class ViewOrderFragment : Fragment(), ILoadOrderCallbackListener {
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     fun onCancelOrderEvent(event: CancelOrderEvent) {
-        val order =
-            (binding.recyclerOrder.adapter as MyOrderAdapter).getItemAtPosition(event.position)
+        val order = (binding.recyclerOrder.adapter as MyOrderAdapter).getItemAtPosition(event.position)
         if (order.orderStatus == 0) {
 
             //If payment == COD

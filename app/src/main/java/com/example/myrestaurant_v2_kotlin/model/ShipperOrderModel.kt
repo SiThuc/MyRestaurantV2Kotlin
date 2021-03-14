@@ -8,4 +8,5 @@ class ShipperOrderModel() {
     var currentLng: Double = 0.0
     val orderModel: OrderModel? = null
     val isStartTrip = false
+    var estimateTime:String=""
 }

@@ -195,6 +195,27 @@ object Common {
 
     }
 
+    fun findFoodInListById(category: CategoryModel, foodId: String): FoodModel? {
+        if (category.foods != null && category.foods!!.size > 0) {
+            for (foodModel in category.foods!!)
+                if (foodModel.id.equals(foodId))
+                    return foodModel
+            return null
+        } else return null
+    }
+
+    fun getListAddon(addonModels: List<AddonModel>): String {
+        val result = StringBuilder()
+        for(addonModel in addonModels)
+            result.append(addonModel.name).append(",")
+
+        if(result.isNotEmpty())
+            return result.substring(0, result.length -1) //Remove last
+        else
+            return "Default"
+
+    }
+
     val REFUND_REQUEST_REF: String = "RefundRequests"
     var currentShipperOrder: ShipperOrderModel? = null
     val SHIPPING_ORDER_REF: String = "ShipperOrders"

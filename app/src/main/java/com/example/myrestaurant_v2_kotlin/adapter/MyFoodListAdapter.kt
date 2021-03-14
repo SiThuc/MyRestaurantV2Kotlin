@@ -25,10 +25,10 @@ import io.reactivex.schedulers.Schedulers
 import org.greenrobot.eventbus.EventBus
 
 class MyFoodListAdapter(
-    var context: Context,
-    var foodList: List<FoodModel>
+        var context: Context,
+        var foodList: List<FoodModel>
 ) :
-    RecyclerView.Adapter<MyFoodListAdapter.MyViewHolder>() {
+        RecyclerView.Adapter<MyFoodListAdapter.MyViewHolder>() {
 
     lateinit var binding: LayoutFoodlistItemBinding
     private val compositeDisposable: CompositeDisposable
@@ -40,10 +40,10 @@ class MyFoodListAdapter(
     }
 
     inner class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView),
-        View.OnClickListener {
+            View.OnClickListener {
         private var listener: IRecyclerItemClickListener? = null
 
-        fun setListener(listener: IRecyclerItemClickListener){
+        fun setListener(listener: IRecyclerItemClickListener) {
             this.listener = listener
         }
 
@@ -66,11 +66,11 @@ class MyFoodListAdapter(
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         with(holder) {
             Glide.with(context).load(foodList.get(position).image)
-                .into(binding.imgFood)
+                    .into(binding.imgFood)
             binding.txtFoodName.text = foodList.get(position).name
             binding.txtFoodPrice.text = "€ " + foodList.get(position).price.toString()
 
-            setListener(object : IRecyclerItemClickListener{
+            setListener(object : IRecyclerItemClickListener {
                 override fun onItemClick(view: View, pos: Int) {
                     Common.foodSelected = foodList[pos]
                     Common.foodSelected!!.key = pos.toString()
@@ -85,6 +85,7 @@ class MyFoodListAdapter(
                 cartItem.uid = Common.currentUser!!.uid.toString()
                 cartItem.userPhone = Common.currentUser!!.phone
 
+                cartItem.categoryId = Common.categorySelected!!.menu_id!!
                 cartItem.foodId = foodList[position].id!!
                 cartItem.foodName = foodList[position].name
                 cartItem.foodImage = foodList[position].image
@@ -95,101 +96,102 @@ class MyFoodListAdapter(
                 cartItem.foodSize = "Default"
 
                 cartDataSource.getItemWithAllOptionsInCart(
-                    Common.currentUser!!.uid,
-                    cartItem.foodId,
-                    cartItem.foodSize,
-                    cartItem.foodAddon
+                        Common.currentUser!!.uid,
+                        cartItem.categoryId,
+                        cartItem.foodId,
+                        cartItem.foodSize,
+                        cartItem.foodAddon
                 )
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(object : SingleObserver<CartItem> {
-                        override fun onSubscribe(d: Disposable) {
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(object : SingleObserver<CartItem> {
+                            override fun onSubscribe(d: Disposable) {
 
-                        }
-
-                        override fun onSuccess(t: CartItem) {
-                            if (t.equals(cartItem)) {
-                                //If item already in database, just update
-                                t.foodExtraPrice = cartItem.foodExtraPrice
-                                t.foodAddon = cartItem.foodAddon
-                                t.foodSize = cartItem.foodSize
-                                t.foodQuantity = t.foodQuantity!!.plus(cartItem.foodQuantity!!)
-
-                                cartDataSource.updateCart(t)
-                                    .subscribeOn(Schedulers.io())
-                                    .observeOn(AndroidSchedulers.mainThread())
-                                    .subscribe(object : SingleObserver<Int> {
-                                        override fun onSubscribe(d: Disposable) {
-                                        }
-
-                                        override fun onSuccess(t: Int) {
-                                            Toast.makeText(
-                                                context,
-                                                "Update Data success!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            EventBus.getDefault().postSticky(CountCartEvent(true))
-                                        }
-
-                                        override fun onError(e: Throwable) {
-                                            Toast.makeText(
-                                                context,
-                                                "[UPDATE CART] " + e.message,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    })
-                            } else {
-                                // If item is not avaiable in database, just insert
-                                compositeDisposable.add(
-                                    cartDataSource.insertOrReplaceAll(cartItem)
-                                        .subscribeOn(Schedulers.io())
-                                        .observeOn(AndroidSchedulers.mainThread())
-                                        .subscribe({
-                                            Toast.makeText(
-                                                context,
-                                                "Add to cart success",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            EventBus.getDefault().postSticky(CountCartEvent(true))
-                                        }, { t: Throwable ->
-                                            Toast.makeText(
-                                                context,
-                                                "[INSERT CART] " + t.message,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        })
-                                )
                             }
 
-                        }
+                            override fun onSuccess(t: CartItem) {
+                                if (t.equals(cartItem)) {
+                                    //If item already in database, just update
+                                    t.foodExtraPrice = cartItem.foodExtraPrice
+                                    t.foodAddon = cartItem.foodAddon
+                                    t.foodSize = cartItem.foodSize
+                                    t.foodQuantity = t.foodQuantity!!.plus(cartItem.foodQuantity!!)
 
-                        override fun onError(e: Throwable) {
-                            if (e.message!!.contains("empty")) {
-                                compositeDisposable.add(
-                                    cartDataSource.insertOrReplaceAll(cartItem)
-                                        .subscribeOn(Schedulers.io())
-                                        .observeOn(AndroidSchedulers.mainThread())
-                                        .subscribe({
-                                            Toast.makeText(
-                                                context,
-                                                "Add to cart Success",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            EventBus.getDefault().postSticky(CountCartEvent(true))
-                                        }, { t: Throwable ->
-                                            Toast.makeText(
-                                                context,
-                                                "[INSERT CART] " + t.message,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        })
-                                )
-                            } else
-                                Toast.makeText(context, "[CART ERROR]!! ", Toast.LENGTH_SHORT).show()
-                        }
+                                    cartDataSource.updateCart(t)
+                                            .subscribeOn(Schedulers.io())
+                                            .observeOn(AndroidSchedulers.mainThread())
+                                            .subscribe(object : SingleObserver<Int> {
+                                                override fun onSubscribe(d: Disposable) {
+                                                }
 
-                    })
+                                                override fun onSuccess(t: Int) {
+                                                    Toast.makeText(
+                                                            context,
+                                                            "Update Data success!",
+                                                            Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    EventBus.getDefault().postSticky(CountCartEvent(true))
+                                                }
+
+                                                override fun onError(e: Throwable) {
+                                                    Toast.makeText(
+                                                            context,
+                                                            "[UPDATE CART] " + e.message,
+                                                            Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            })
+                                } else {
+                                    // If item is not avaiable in database, just insert
+                                    compositeDisposable.add(
+                                            cartDataSource.insertOrReplaceAll(cartItem)
+                                                    .subscribeOn(Schedulers.io())
+                                                    .observeOn(AndroidSchedulers.mainThread())
+                                                    .subscribe({
+                                                        Toast.makeText(
+                                                                context,
+                                                                "Add to cart success",
+                                                                Toast.LENGTH_SHORT
+                                                        ).show()
+                                                        EventBus.getDefault().postSticky(CountCartEvent(true))
+                                                    }, { t: Throwable ->
+                                                        Toast.makeText(
+                                                                context,
+                                                                "[INSERT CART] " + t.message,
+                                                                Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    })
+                                    )
+                                }
+
+                            }
+
+                            override fun onError(e: Throwable) {
+                                if (e.message!!.contains("empty")) {
+                                    compositeDisposable.add(
+                                            cartDataSource.insertOrReplaceAll(cartItem)
+                                                    .subscribeOn(Schedulers.io())
+                                                    .observeOn(AndroidSchedulers.mainThread())
+                                                    .subscribe({
+                                                        Toast.makeText(
+                                                                context,
+                                                                "Add to cart Success",
+                                                                Toast.LENGTH_SHORT
+                                                        ).show()
+                                                        EventBus.getDefault().postSticky(CountCartEvent(true))
+                                                    }, { t: Throwable ->
+                                                        Toast.makeText(
+                                                                context,
+                                                                "[INSERT CART] " + t.message,
+                                                                Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    })
+                                    )
+                                } else
+                                    Toast.makeText(context, "[CART ERROR]!! ", Toast.LENGTH_SHORT).show()
+                            }
+
+                        })
             }
         }
     }

@@ -39,11 +39,12 @@ class LocalCartDataSource(private val cartDAO: CartDAO) : CartDataSource {
     }
 
     override fun getItemWithAllOptionsInCart(
-        uid: String,
-        foodId: String,
-        foodSize: String,
-        foodAddon: String
+            uid: String,
+            categoryId: String,
+            foodId: String,
+            foodSize: String,
+            foodAddon: String
     ): Single<CartItem> {
-        return cartDAO.getItemWithAllOptionsInCart(uid, foodId, foodSize, foodAddon)
+        return cartDAO.getItemWithAllOptionsInCart(uid, categoryId, foodId, foodSize, foodAddon)
     }
 }

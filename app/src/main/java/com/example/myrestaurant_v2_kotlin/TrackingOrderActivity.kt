@@ -1,18 +1,26 @@
 package com.example.myrestaurant_v2_kotlin
 
+import android.Manifest
 import android.animation.ValueAnimator
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.view.View
 import android.view.animation.LinearInterpolator
+import android.widget.Button
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.myrestaurant_v2_kotlin.common.Common
+import com.example.myrestaurant_v2_kotlin.common.MyCustomInfoWindow
 import com.example.myrestaurant_v2_kotlin.model.ShipperOrderModel
 import com.example.myrestaurant_v2_kotlin.remote.IGoogleAPI
 import com.example.myrestaurant_v2_kotlin.remote.RetrofitGoogleAPIClient
@@ -22,7 +30,14 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.google.android.material.button.MaterialButton
 import com.google.firebase.database.*
+import com.karumi.dexter.Dexter
+import com.karumi.dexter.PermissionToken
+import com.karumi.dexter.listener.PermissionDeniedResponse
+import com.karumi.dexter.listener.PermissionGrantedResponse
+import com.karumi.dexter.listener.PermissionRequest
+import com.karumi.dexter.listener.single.PermissionListener
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -47,6 +62,8 @@ class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback, ValueEven
     private lateinit var shipperRef: DatabaseReference
     private var isInit = false  //isInist must be false for first time
 
+    private lateinit var btnCall: MaterialButton
+
     //Move maker
     private var handler: Handler? = null
     private var index = 0
@@ -69,6 +86,38 @@ class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback, ValueEven
         mapFragment.getMapAsync(this)
 
         subscribeShipperMove()
+
+        initView()
+    }
+
+    private fun initView() {
+        btnCall = findViewById<MaterialButton>(R.id.btn_call)
+        btnCall.setOnClickListener {
+            val intent = Intent(Intent.ACTION_CALL)
+            intent.data = (Uri.parse(StringBuilder("tel:").append(Common.currentShipperOrder!!.shipperPhone).toString()))
+
+            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED){
+                //Request permission
+                Dexter.withContext(this)
+                        .withPermission(Manifest.permission.CALL_PHONE)
+                        .withListener(object : PermissionListener {
+                            override fun onPermissionGranted(p0: PermissionGrantedResponse?) {
+
+                            }
+
+                            override fun onPermissionDenied(p0: PermissionDeniedResponse?) {
+                                Toast.makeText(this@TrackingOrderActivity, "You must enable this permission to CALL", Toast.LENGTH_SHORT).show()
+                            }
+
+                            override fun onPermissionRationaleShouldBeShown(p0: PermissionRequest?, p1: PermissionToken?) {
+
+                            }
+                        }).check()
+                return@setOnClickListener
+            }
+            startActivity(intent)
+        }
+
     }
 
     private fun subscribeShipperMove() {
@@ -80,6 +129,8 @@ class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback, ValueEven
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+
+        mMap.setInfoWindowAdapter(MyCustomInfoWindow(layoutInflater))
 
         mMap.uiSettings.isZoomControlsEnabled = true
         try {
@@ -113,8 +164,11 @@ class TrackingOrderActivity : AppCompatActivity(), OnMapReadyCallback, ValueEven
 
             shipperMarker = mMap.addMarker(MarkerOptions()
                     .icon(BitmapDescriptorFactory.fromBitmap(resized))
-                    .title(Common.currentShipperOrder!!.shipperName)
-                    .snippet(Common.currentShipperOrder!!.shipperPhone)
+                    .title(StringBuilder("Shipper: ").append(Common.currentShipperOrder!!.shipperName).toString())
+                    .snippet(StringBuilder("Phone: ").append(Common.currentShipperOrder!!.shipperPhone)
+                            .append("\n")
+                            .append("Estimate Delivery Time:")
+                            .append(Common.currentShipperOrder!!.estimateTime).toString())
                     .position(locationShipper))
 
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(locationShipper, 18.0f))

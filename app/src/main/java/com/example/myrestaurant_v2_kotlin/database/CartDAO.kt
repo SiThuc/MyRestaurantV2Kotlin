@@ -32,11 +32,12 @@ interface CartDAO {
     @Query("Delete from Cart where uid=:uid")
     fun cleanCart(uid: String): Single<Int>
 
-    @Query("select * from Cart where foodId =:foodId AND uid=:uid AND foodSize=:foodSize AND foodAddon=:foodAddon")
+    @Query("select * from Cart where categoryId=:categoryId AND foodId =:foodId AND uid=:uid AND foodSize=:foodSize AND foodAddon=:foodAddon")
     fun getItemWithAllOptionsInCart(
-        uid: String,
-        foodId: String,
-        foodSize: String,
-        foodAddon: String,
+            uid: String,
+            categoryId: String,
+            foodId: String,
+            foodSize: String,
+            foodAddon: String,
     ): Single<CartItem>
 }
