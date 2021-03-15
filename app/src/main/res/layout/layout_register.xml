@@ -10,13 +10,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Username" />
-
-    <!--    <EditText-->
-    <!--        android:id="@+id/edt_address"-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:hint="Address"-->
-    <!--        android:layout_marginTop="10dp"/>-->
     <fragment
         android:id="@+id/places_autocomplete_fragment"
         android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
@@ -33,11 +26,18 @@
         android:textSize="16sp"
         android:textStyle="bold"/>
 
-    <EditText
-        android:id="@+id/edt_phone"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:hint="Phone number" />
+        android:id="@+id/phone_input_layout">
+        <EditText
+            android:id="@+id/edt_phone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="Phone number" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+
 
 </LinearLayout>

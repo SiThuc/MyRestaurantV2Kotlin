@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
@@ -31,10 +32,16 @@ object Common {
         //Fix Error crash first time
         if (currentUser != null)
             FirebaseDatabase.getInstance()
-                    .getReference(TOKEN_REF)
-                    .child(currentUser!!.uid)
-                    .setValue(TokenModel(currentUser!!.phone!!, token))
-                    .addOnFailureListener { e -> Toast.makeText(context, "" + e.message, Toast.LENGTH_SHORT).show() }
+                .getReference(TOKEN_REF)
+                .child(currentUser!!.uid)
+                .setValue(TokenModel(currentUser!!.phone!!, token))
+                .addOnFailureListener { e ->
+                    Toast.makeText(
+                        context,
+                        "" + e.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
     }
 
     fun getDateOfWeek(i: Int): String {
@@ -61,8 +68,8 @@ object Common {
     }
 
     fun calculateExtraPrice(
-            selectedSize: SizeModel?,
-            selectedAddons: MutableList<AddonModel>?
+        selectedSize: SizeModel?,
+        selectedAddons: MutableList<AddonModel>?
     ): Double? {
         var result = 0.0
         if (selectedSize != null)
@@ -88,9 +95,9 @@ object Common {
 
     fun createOrderNumber(): String {
         return StringBuilder()
-                .append(System.currentTimeMillis())
-                .append(Math.abs(Random().nextInt()))
-                .toString()
+            .append(System.currentTimeMillis())
+            .append(Math.abs(Random().nextInt()))
+            .toString()
     }
 
     fun convertStatusToText(orderStatus: Int): String {
@@ -105,17 +112,30 @@ object Common {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun showNotification(context: Context, id: Int, title: String?, content: String?, intent: Intent?) {
+    fun showNotification(
+        context: Context,
+        id: Int,
+        title: String?,
+        content: String?,
+        bitmap: Bitmap,
+        intent: Intent?
+    ) {
         Log.d("Notification", "Tittle:$title, Content:$content")
         var pendingIntent: PendingIntent? = null
         if (intent != null) {
-            pendingIntent = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+            pendingIntent =
+                PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
             val NOTIFICATION_CHANNEL_ID = "pham.thuc.myrestaurantv2"
 
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            val notificationChannel = NotificationChannel(NOTIFICATION_CHANNEL_ID, "My Restaurant V2", NotificationManager.IMPORTANCE_DEFAULT)
+            val notificationChannel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "My Restaurant V2",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
             notificationChannel.description = "My Restaurant V2 Channel"
             notificationChannel.enableLights(true)
             notificationChannel.enableVibration(true)
@@ -126,8 +146,61 @@ object Common {
 
             val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             builder.setContentTitle(title).setContentText(content).setAutoCancel(true)
-                    .setSmallIcon(R.mipmap.ic_launcher_round)
-                    .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_restaurant_24))
+                .setSmallIcon(R.mipmap.ic_launcher_round)
+                .setLargeIcon(bitmap)
+                .setStyle(NotificationCompat.BigPictureStyle().bigPicture(bitmap))
+
+            if (pendingIntent != null)
+                builder.setContentIntent(pendingIntent)
+
+            val notification = builder.build()
+
+            notificationManager.notify(id, notification)
+            Log.d("Notification", "Ending notification")
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun showNotification(
+        context: Context,
+        id: Int,
+        title: String?,
+        content: String?,
+        intent: Intent?
+    ) {
+        Log.d("Notification", "Tittle:$title, Content:$content")
+        var pendingIntent: PendingIntent? = null
+        if (intent != null) {
+            pendingIntent =
+                PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+            val NOTIFICATION_CHANNEL_ID = "pham.thuc.myrestaurantv2"
+
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            val notificationChannel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "My Restaurant V2",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationChannel.description = "My Restaurant V2 Channel"
+            notificationChannel.enableLights(true)
+            notificationChannel.enableVibration(true)
+            notificationChannel.lightColor = Color.RED
+            notificationChannel.vibrationPattern = longArrayOf(0, 1000, 500, 1000)
+
+            notificationManager.createNotificationChannel(notificationChannel)
+
+            val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            builder.setContentTitle(title).setContentText(content).setAutoCancel(true)
+                .setSmallIcon(R.mipmap.ic_launcher_round)
+                .setLargeIcon(
+                    BitmapFactory.decodeResource(
+                        context.resources,
+                        R.drawable.ic_restaurant_24
+                    )
+                )
 
             if (pendingIntent != null)
                 builder.setContentIntent(pendingIntent)
@@ -196,7 +269,7 @@ object Common {
     }
 
     fun findFoodInListById(category: CategoryModel, foodId: String): FoodModel? {
-        if (category.foods != null && category.foods!!.size > 0) {
+        if (category.foods != null && category.foods!!.isNotEmpty()) {
             for (foodModel in category.foods!!)
                 if (foodModel.id.equals(foodId))
                     return foodModel
@@ -206,16 +279,20 @@ object Common {
 
     fun getListAddon(addonModels: List<AddonModel>): String {
         val result = StringBuilder()
-        for(addonModel in addonModels)
+        for (addonModel in addonModels)
             result.append(addonModel.name).append(",")
 
-        if(result.isNotEmpty())
-            return result.substring(0, result.length -1) //Remove last
+        if (result.isNotEmpty())
+            return result.substring(0, result.length - 1) //Remove last
         else
             return "Default"
 
     }
 
+    val IMAGE_URL: String = "IMAGE_URL"
+    val IS_SEND_IMAGE: String = "IS_SEND_IMAGE"
+    val NEWS_TOPIC: String = "news"
+    val IS_SUBSCRIBE_NEW: String = "IS_SUBSCRIBE_NEWS"
     val REFUND_REQUEST_REF: String = "RefundRequests"
     var currentShipperOrder: ShipperOrderModel? = null
     val SHIPPING_ORDER_REF: String = "ShipperOrders"

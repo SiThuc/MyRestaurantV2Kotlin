@@ -115,6 +115,9 @@ dependencies {
 
     implementation 'com.androidwidgets:formatedittext:0.2.0'
 
+    //Paper
+    implementation 'io.paperdb:paperdb:2.7.1'
+
 
 
 }

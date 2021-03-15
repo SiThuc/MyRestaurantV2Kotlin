@@ -39,13 +39,16 @@ import com.karumi.dexter.listener.single.PermissionListener
 import dmax.dialog.SpotsDialog
 import io.reactivex.disposables.CompositeDisposable
 import java.util.*
+import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity() {
+
+    private var providers: List<AuthUI.IdpConfig>?=null
 
     private var placeSelected: Place? = null
     private var places_fragment: AutocompleteSupportFragment? = null
     private lateinit var placeClient: PlacesClient
-    private val placeFields = Arrays.asList(
+    private val placeFields = listOf(
         Place.Field.ID,
         Place.Field.NAME,
         Place.Field.ADDRESS,
@@ -90,6 +93,10 @@ class MainActivity : AppCompatActivity() {
         Places.initialize(this, getString(R.string.google_maps_key))
         placeClient = Places.createClient(this)
 
+        providers = listOf<AuthUI.IdpConfig>(
+                AuthUI.IdpConfig.PhoneBuilder().build(),
+                AuthUI.IdpConfig.EmailBuilder().build())
+
         firebaseAuth = FirebaseAuth.getInstance()
         userRef = FirebaseDatabase.getInstance().getReference(Common.USER_REF)
         dialog = SpotsDialog.Builder().setContext(this).setCancelable(false).build()
@@ -102,10 +109,8 @@ class MainActivity : AppCompatActivity() {
                     override fun onPermissionGranted(p0: PermissionGrantedResponse?) {
                         val user = firebaseAuth.currentUser
                         if (user != null) {
-
                             // Already login
-                            Toast.makeText(this@MainActivity, "Already login", Toast.LENGTH_SHORT)
-                                .show()
+                            Toast.makeText(this@MainActivity, "Already login", Toast.LENGTH_SHORT).show()
                             checkUserFromFirebase(user)
 
                         } else {
@@ -153,7 +158,6 @@ class MainActivity : AppCompatActivity() {
         dialog.dismiss()
     }
 
-
     private fun showRegisterDialog(user: FirebaseUser) {
         val builder = androidx.appcompat.app.AlertDialog.Builder(this)
         builder.setTitle("Register")
@@ -175,8 +179,15 @@ class MainActivity : AppCompatActivity() {
         })
 
 
-        //Set phone number for editText
-        dialog_binding.edtPhone.setText(user.phoneNumber.toString())
+        //Set Data
+        if(user.phoneNumber == null || TextUtils.isEmpty(user.phoneNumber)){
+            dialog_binding.phoneInputLayout.hint = "Email"
+            dialog_binding.edtPhone.setText(user.email)
+            dialog_binding.edtName.setText(user.displayName)
+        }else{
+            dialog_binding.edtPhone.setText(user.phoneNumber.toString())
+        }
+
 
         builder.setView(dialog_binding.root)
         builder.setNegativeButton("CANCEL") { dialogInterface, i -> dialogInterface.dismiss() }
@@ -247,16 +258,13 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-
     private fun phoneLogin() {
-        val providers = arrayListOf(AuthUI.IdpConfig.PhoneBuilder().build())
-        startActivityForResult(
-            AuthUI.getInstance()
+        startActivityForResult(AuthUI.getInstance()
                 .createSignInIntentBuilder()
-                .setAvailableProviders(providers)
-                .build(),
-            APP_REQUEST_CODE
-        )
+                .setTheme(R.style.LoginTheme)
+                .setLogo(R.drawable.logo)
+                .setAvailableProviders(providers!!)
+                .build(), APP_REQUEST_CODE)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

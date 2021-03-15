@@ -29,6 +29,7 @@ import com.example.myrestaurant_v2_kotlin.database.LocalCartDataSource
 import com.example.myrestaurant_v2_kotlin.databinding.ActivityHomeBinding
 import com.example.myrestaurant_v2_kotlin.databinding.AppBarMainBinding
 import com.example.myrestaurant_v2_kotlin.databinding.LayoutRegisterBinding
+import com.example.myrestaurant_v2_kotlin.databinding.LayoutSubscribeNewsBinding
 import com.example.myrestaurant_v2_kotlin.eventbus.*
 import com.example.myrestaurant_v2_kotlin.model.*
 import com.google.android.gms.common.api.Status
@@ -43,7 +44,9 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.messaging.FirebaseMessaging
 import dmax.dialog.SpotsDialog
+import io.paperdb.Paper
 import io.reactivex.SingleObserver
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
@@ -146,6 +149,8 @@ class HomeActivity : AppCompatActivity() {
                         navController.navigate(R.id.nav_view_order)
                 }else if(item.itemId == R.id.nav_update_info){
                     showUpdateInfoDialog()
+                }else if(item.itemId == R.id.nav_news){
+                    showNewsDialog()
                 }
 
 
@@ -157,6 +162,48 @@ class HomeActivity : AppCompatActivity() {
         initPlacesClient()
 
         countCartItem()
+    }
+
+    private fun showNewsDialog() {
+        Paper.init(this)
+        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
+        builder.setTitle("NEWS SYSTEM")
+        builder.setMessage("Do you want to subscribe news?")
+
+        val dialogBinding = LayoutSubscribeNewsBinding.inflate(layoutInflater)
+        val isSubscribeNews = Paper.book().read<Boolean>(Common.IS_SUBSCRIBE_NEW, false)
+
+        if(isSubscribeNews)
+            dialogBinding.ckbSubscribeNews.isChecked = true
+
+        builder.setView(dialogBinding.root)
+
+        builder.setNegativeButton("CANCEL") { dialogInterface, i -> dialogInterface.dismiss() }
+
+        builder.setPositiveButton("SEND") { dialogInterface, i ->
+            if(dialogBinding.ckbSubscribeNews.isChecked){
+                Paper.book().write(Common.IS_SUBSCRIBE_NEW, true)
+                FirebaseMessaging.getInstance().subscribeToTopic(Common.NEWS_TOPIC)
+                    .addOnFailureListener { e ->
+                        Toast.makeText(this, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnSuccessListener { aVoid ->
+                        Toast.makeText(this, "Subscribe success!", Toast.LENGTH_SHORT).show()
+                    }
+            }else{
+                Paper.book().delete(Common.IS_SUBSCRIBE_NEW)
+                FirebaseMessaging.getInstance().unsubscribeFromTopic(Common.NEWS_TOPIC)
+                    .addOnFailureListener { e ->
+                        Toast.makeText(this, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnSuccessListener { aVoid ->
+                        Toast.makeText(this, "Unsubscribe success!", Toast.LENGTH_SHORT).show()
+                    }
+            }
+        }
+
+        val dialog = builder.create()
+        dialog.show()
     }
 
     private fun initPlacesClient() {

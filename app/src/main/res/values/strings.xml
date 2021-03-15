@@ -30,4 +30,5 @@
     <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">AIzaSyCAUKK1lZ3T7NAFHNcu-Vobl7JQIQGiZIs</string>
     <string name="update_info">Update Info</string>
     <string name="title_activity_tracking_order">Map</string>
+    <string name="menu_news">News</string>
 </resources>
